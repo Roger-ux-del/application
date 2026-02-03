@@ -2,39 +2,20 @@ import os
 import logging
 import argparse
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from dotenv import load_dotenv
-from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
 from sklearn.metrics import confusion_matrix
+from src.pipeline.build_pipeline import build_pipeline
+from src.models.train_evaluate import evaluate_model
 
 
-import logging
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("application.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler("application.log"), logging.StreamHandler()],
 )
-
-
-# logging.info("Début du pipeline Titanic")
-# pipe.fit(X_TRAIN, y_train)
-# logging.info("Pipeline entraîné avec succès")
-
-
-
-
-
 
 
 
@@ -47,18 +28,13 @@ jetonapi = os.getenv("JETONAPI")
 print(f"Jeton API chargé : {jetonapi}")
 
 
-
-
 # titanic.py
 
 
 # --- 1. Paramètres en ligne de commande ---
 parser = argparse.ArgumentParser(description="Random Forest Titanic")
 parser.add_argument(
-    "--n_trees",
-    type=int,
-    default=20,
-    help="Nombre d'arbres dans la Random Forest"
+    "--n_trees", type=int, default=20, help="Nombre d'arbres dans la Random Forest"
 )
 args = parser.parse_args()
 
@@ -73,82 +49,24 @@ clf = RandomForestClassifier(n_estimators=args.n_trees)
 # # os.chdir('/home/coder/work/ensae-reproductibilite-application')
 TrainingData = pd.read_csv("data/raw/data.csv")
 
-# TrainingData.head()
-
-
-# TrainingData["Ticket"].str.split("/").str.len()
-
-# TrainingData["Name"].str.split(",").str.len()
 
 N_TREES = 20
 MAX_DEPTH = None
 MAX_FEATURES = "sqrt"
 
-# TrainingData.isnull().sum()
+
 
 
 ## Un peu d'exploration et de feature engineering
 
 # ### Statut socioéconomique
 
-# fig, axes = plt.subplots(
-#     1, 2, figsize=(12, 6)
-# )  # layout matplotlib 1 ligne 2 colonnes taile 16*8
-# fig1_pclass = sns.countplot(data=TrainingData, x="Pclass", ax=axes[0]).set_title(
-#     "fréquence des Pclass"
-# )
-# fig2_pclass = sns.barplot(
-#     data=TrainingData, x="Pclass", y="Survived", ax=axes[1]
-# ).set_title("survie des Pclass")
-
-
-# ### Age
-
-# sns.histplot(data=TrainingData, x="Age", bins=15, kde=False).set_title(
-#     "Distribution de l'âge"
-# )
-# plt.show()
 
 ## Encoder les données imputées ou transformées.
 
 
-numeric_features = ["Age", "Fare"]
-categorical_features = ["Embarked", "Sex"]
 
-numeric_transformer = Pipeline(
-    steps=[
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", MinMaxScaler()),
-    ]
-)
-
-categorical_transformer = Pipeline(
-    steps=[
-        ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder()),
-    ]
-)
-
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("Preprocessing numerical", numeric_transformer, numeric_features),
-        (
-            "Preprocessing categorical",
-            categorical_transformer,
-            categorical_features,
-        ),
-    ]
-)
-
-pipe = Pipeline(
-    [
-        ("preprocessor", preprocessor),
-        ("classifier", RandomForestClassifier(n_estimators=20)),
-    ]
-)
-
-
+pipe = build_pipeline(n_trees=args.n_trees)
 # splitting samples
 y = TrainingData["Survived"]
 X = TrainingData.drop("Survived", axis="columns")
@@ -165,17 +83,18 @@ JETONAPI = "$trotskitueleski1917"
 # Random Forest
 
 
-
-
 # Ici demandons d'avoir 20 arbres
 pipe.fit(X_TRAIN, y_train)
 
 
 # calculons le score sur le dataset d'apprentissage et sur le dataset de test (10% du dataset d'apprentissage mis de côté)
 # le score étant le nombre de bonne prédiction
-rdmf_score = pipe.score(X_TEST, y_test)
-rdmf_score_tr = pipe.score(X_TRAIN, y_train)
-print(f"{rdmf_score:.1%} de bonnes réponses sur les données de test pour validation")
+
+
+y_pred = pipe.predict(X_TEST)
+
+score, conf_matrix = evaluate_model(y_test, y_pred)
+print(f"{score:.1%} de bonnes réponses sur les données de test pour validation")
 
 
 print(20 * "-")
