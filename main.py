@@ -11,6 +11,7 @@ from src.models.train_evaluate import evaluate_model
 
 
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -22,11 +23,12 @@ logging.basicConfig(
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv()
 
-# Récupérer ton jeton
-jetonapi = os.getenv("JETONAPI")
+jeton_api = os.environ.get("JETON_API", "")
 
-print(f"Jeton API chargé : {jetonapi}")
-
+if jeton_api.startswith("$"):
+    logging.info("API token has been configured properly")
+else:
+    logging.info("API token has not been configured")
 
 # titanic.py
 
@@ -38,7 +40,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-print(f"Nombre d'arbres : {args.n_trees}")
+logging.info(f"Nombre d'arbres : {args.n_trees}")
 
 # --- 2. Créer le modèle en utilisant le paramètre ---
 clf = RandomForestClassifier(n_estimators=args.n_trees)
@@ -97,6 +99,6 @@ score, conf_matrix = evaluate_model(y_test, y_pred)
 print(f"{score:.1%} de bonnes réponses sur les données de test pour validation")
 
 
-print(20 * "-")
-print("matrice de confusion")
-print(confusion_matrix(y_test, pipe.predict(X_TEST)))
+logging.info(20 * "-")
+logging.info("matrice de confusion")
+logging.info(confusion_matrix(y_test, pipe.predict(X_TEST)))
